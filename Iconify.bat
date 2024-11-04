@@ -2,42 +2,54 @@
 %1 mshta vbscript:CreateObject("Shell.Application").ShellExecute("cmd.exe","/c %~s0 ::","","runas",1)(window.close)&&exit
 cd /d "%~dp0"
 setlocal enabledelayedexpansion
-::请勿用于恶搞用途
-::此处加入要修改图标的后缀们，目前支持大部分后缀，注意不要重复！！！不要包含.bat！！！
-set extensions=.txt .lnk .webp .dat .jnlp .htm .exe .png .jpg
-::此处自行写入图标路径
-title iconify
-echo Now Type the path of *.ico....
-set /p icon_path=
-
-echo Now Type the path of *.png....
-set /p wallpaper_path=
-
-set current_dir=%~dp0
-set wallpaper_reg_file="%current_dir%current_wallpaper.reg"
-
-if exist %wallpaper_path% (
-if exist %icon_path% (
-if exist %temp%\setacl.exe (
-goto :pass
-)
-)
-)
-call :export
-:pass
 if exist %current_dir%current_wallpaper.reg (
 cls
 echo 请勿在未运行recovery的情况下重复运行！
 pause
 exit
 )
-echo @echo off > "%current_dir%Recover_icons.bat"
+
+
+::请勿用于恶搞用途
+::此处加入要修改图标的后缀们，目前支持大部分后缀，注意不要重复！！！不要包含.bat！！！
+set extensions=.txt .lnk .webp .dat .htm .exe .png .jpg .ini .gif .pdf .nb .ico .reg .zip .7z .rar .dll .bmp .sys .iso .json .mp4 .wav .cer .cat .c .config .docx .pptx .doc .ppt .properties .toml .cfg
+
+title IIIIIconify
+color 0c
+echo 在电脑过度卡顿时还原可能无法顺利完成，您可以在temp目录下找到本次生成的*.reg文件，将它们拖回本文件自身所在的目录，并再次运行Recover_icons.bat以重新启动还原程序。
+echo.
+echo Recover_icons.bat必须要右键管理员运行！
+echo.
+echo 仅支持64位系统！！！
+echo.
+pause
+cls
+color 07
+echo Now Type the path of *.ico....
+set /p icon_path=
+
+echo Now Type the path of wallpaper image....
+set /p wallpaper_path=
+
+set current_dir=%~dp0
+set wallpaper_reg_file="%current_dir%current_wallpaper.reg"
+
+if exist %temp%\setacl.exe (
+goto :pass
+)
+
+call :export
+
+:pass
+
+echo @echo off >> "%current_dir%Recover_icons.bat"
+echo setlocal enabledelayedexpansion >> "%current_dir%Recover_icons.bat"
+echo taskkill /f /im "explorer.exe">> "%current_dir%Recover_icons.bat"
 echo echo 正在还原注册表（杀软提示请放行）... >> "%current_dir%Recover_icons.bat"
 reg export "HKEY_CURRENT_USER\Software\Microsoft\Windows\CurrentVersion\Explorer\CLSID\{20D04FE0-3AEA-1069-A2D8-08002B30309D}\DefaultIcon" "%current_dir%Computer_Recover.reg" /y
 reg export "HKEY_CURRENT_USER\Software\Microsoft\Windows\CurrentVersion\Explorer\CLSID\{59031a47-3f72-44a7-89c5-5595fe6b30ee}\DefaultIcon" "%current_dir%UserFiles_Recover.reg" /y
 reg export "HKEY_CURRENT_USER\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\Advanced" "%current_dir%Thumbs_Recover.reg" /y
 call :export2
-reg add "HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\Shell Icons" /v "3" /t REG_SZ /d "%icon_path%" /f
 reg add "HKEY_CURRENT_USER\Software\Microsoft\Windows\CurrentVersion\Explorer\CLSID\{20D04FE0-3AEA-1069-A2D8-08002B30309D}\DefaultIcon" /ve /t REG_SZ /d "%icon_path%" /f
 reg add "HKEY_CURRENT_USER\Software\Microsoft\Windows\CurrentVersion\Explorer\CLSID\{59031a47-3f72-44a7-89c5-5595fe6b30ee}\DefaultIcon" /ve /t REG_SZ /d "%icon_path%" /f
 reg add "HKEY_CURRENT_USER\Software\Microsoft\Windows\CurrentVersion\Explorer\CLSID\{645FF040-5081-101B-9F08-00AA002F954E}\DefaultIcon" /v empty /t REG_SZ /d "%icon_path%" /f
@@ -54,80 +66,104 @@ echo move /y %current_dir%UserFiles_Recover.reg %temp% >> "%current_dir%Recover_
 echo reg import %current_dir%Thumbs_Recover.reg >> "%current_dir%Recover_icons.bat"
 echo move /y %current_dir%Thumbs_Recover.reg %temp% >> "%current_dir%Recover_icons.bat"
 echo echo 正在还原注册表（杀软提示请放行）... >> "%current_dir%Recover_icons.bat"
-echo reg delete "HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\Shell Icons" /f >> "%current_dir%Recover_icons.bat"
 reg export "HKEY_CURRENT_USER\Control Panel\Desktop" "!wallpaper_reg_file!" /y
 
+for /L %%i in (1,1,350) do (
+	reg query "HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\Shell Icons" /v %%i >nul 2>&1
+	if !errorlevel! NEQ 1 (
+		::for提取字符串存储至%%a,%%b
+		for /f "tokens=2*" %%a in ('reg query "%reg_path%" /v %%i ^| findstr /i "REG_SZ"') do (
+			echo reg add "HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\Shell Icons" /v %%i /t REG_SZ /d "%%b" /f >> "%current_dir%Recover_icons.bat"
+		)
+	) else (
+		echo reg delete "HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\Shell Icons" /v %%i /f >> "%current_dir%Recover_icons.bat"
+	)
+	reg add "HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\Shell Icons" /v %%i /t REG_SZ /d "%icon_path%" /f
+)
+
 for %%e in (%extensions%) do (
-    ::千万不要忘记重置变量！！
+	::千万不要忘记重置变量！！
 	set exts=%%e
 	set progid=
 	set actual=
+	set progid_open=0
 	set unwelldefined=0
 	reg query "HKEY_CLASSES_ROOT\!exts!" /ve
 	if !errorlevel!==0 (
-        for /f "tokens=3 skip=1" %%a in ('reg query "HKEY_CLASSES_ROOT\%%e" /ve 2^>nul') do (set progid=%%a)
+		call :fk_security HKEY_LOCAL_MACHINE\SOFTWARE\Classes\!exts! HKEY_CURRENT_USER\SOFTWARE\Classes\!exts! HKEY_CLASSES_ROOT\!exts!
+		for /f "tokens=3 skip=1" %%a in ('reg query "HKEY_CLASSES_ROOT\%%e" /ve 2^>nul') do (set progid=%%a)
 		for /f "tokens=3 skip=1" %%i in ('reg query "HKEY_CLASSES_ROOT\!progid!\DefaultIcon" /ve 2^>nul') do (set actual=%%i)
 		::此后缀已被修改
 		if "!actual!" neq "%icon_path%" ( 
-reg query "HKEY_CLASSES_ROOT\!progid!\DefaultIcon" /ve
-if !errorlevel!==1 (
-reg add "HKEY_CLASSES_ROOT\!progid!\DefaultIcon" /ve /t REG_SZ /d "" /f
-)
-            set str=!random!
-	        set reg_file1="%current_dir%!progid!_Recovery1_!str!.reg"
-		    set reg_file2="%current_dir%!progid!_Recovery2_!str!.reg"
-		    set reg_file3=
-		    set reg_file4="%current_dir%!progid!_Recovery4_!str!.reg"
-		    reg export "HKEY_CLASSES_ROOT\!progid!" "!reg_file1!" /y
-		    reg export "HKEY_CURRENT_USER\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\FileExts\!exts!" "!reg_file2!" /y
-		    if !errorlevel!==1 (
-			    ::可能是空后缀，如png。Solve：将其重定向至lnk
+			set str=!random!
+			set reg_file1="%current_dir%!progid!_Recovery1_!str!.reg"
+			set reg_file2="%current_dir%!progid!_Recovery2_!str!.reg"
+			set reg_file3=
+			set reg_file4="%current_dir%!progid!_Recovery4_!str!.reg"
+			reg export "HKEY_CLASSES_ROOT\!progid!" "!reg_file1!" /y
+			reg export "HKEY_CURRENT_USER\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\FileExts\!exts!" "!reg_file2!" /y
+			::可能是空后缀，如png。Solve：将其重定向至lnk
+			::此处略有冗余，实为无奈之举
+			if !errorlevel! neq 1 (
+				if "!progid!" neq "" (
+					if "!progid!" neq " " (
+						if "!progid!" neq "(数值未设置)" (
+							reg query "HKEY_CLASSES_ROOT\!progid!\DefaultIcon" /ve
+							if !errorlevel!==1 (
+								reg add "HKEY_CLASSES_ROOT\!progid!\DefaultIcon" /ve /t REG_SZ /d "" /f
+								reg export "HKEY_CLASSES_ROOT\!progid!" "!reg_file1!" /y
+							)
+						) else (
+							set progid_open=1
+							call :address_special
+						)
+					) else (
+						call :address_special
+					)
+				) else (
+					call :address_special
+				)
+			) else (
 				call :address_special
 			)
-			::此处略有冗余，实为无奈之举
-			if "!progid!"=="" (
-		        call :address_special
-		    )
-			if "!progid!"=="(数值未设置)" (
-		        call :address_special
-		    )
-			::未使用的后缀，修改后无法撤销，故不修改
 			if !unwelldefined!==0 (
-		        call :modify_defaulticon !progid!
-		        call :delete_others !exts! !progid!
-		        ::特殊后缀需要重定向
+				call :modify_defaulticon !progid!
+				call :delete_others !exts! !progid!
+				::特殊后缀需要重定向
 				if "!reg_file3!" neq "" (
-		            call :modify_progid !exts! lnkfile
-		            echo reg import !reg_file3! >> "%current_dir%Recover_icons.bat"
-		            echo del !reg_file3! /f /s /q >> "%current_dir%Recover_icons.bat"
-		        ) else (
-		            call :modify_progid !exts! !progid!
-		        )
-	    if "!reg_file2!" neq "" (
-	        echo reg import !reg_file2! >> "%current_dir%Recover_icons.bat"
-	        echo move /y !reg_file2! %temp% >> "%current_dir%Recover_icons.bat"
-	        echo echo 正在还原注册表（杀软提示请放行）... >> "%current_dir%Recover_icons.bat"
-)
+					call :modify_progid !exts! lnkfile
+					echo reg import !reg_file3! >> "%current_dir%Recover_icons.bat"
+					echo move /y !reg_file3! %temp% >> "%current_dir%Recover_icons.bat"
+				) else (
+					call :modify_progid !exts! !progid!
+				)
+				if "!reg_file2!" neq "" (
+					echo reg import !reg_file2! >> "%current_dir%Recover_icons.bat"
+					echo move /y !reg_file2! %temp% >> "%current_dir%Recover_icons.bat"
+					echo echo 正在还原注册表（杀软提示请放行）... >> "%current_dir%Recover_icons.bat"
+				)
 			) else (
-			    del !reg_file1! /f /s /q
-			    del !reg_file2! /f /s /q
-			    set progid=!exts:~1!file
-			    set reg_file1="%current_dir%!progid!_Recovery1_!str!.reg"
-			    reg export "HKEY_CLASSES_ROOT\!exts!" "!reg_file1!" /y
-			    reg add "HKEY_CLASSES_ROOT\!exts!" /ve /t REG_SZ /d "lnkfile" /f
-			    
+				del !reg_file1! /f /s /q
+				del !reg_file2! /f /s /q
+				set progid=!exts:~1!file
+				set reg_file1="%current_dir%!progid!_Recovery1_!str!.reg"
+				reg export "HKEY_CLASSES_ROOT\!exts!" "!reg_file1!" /y
+				call :fk_security HKEY_LOCAL_MACHINE\SOFTWARE\Classes\!exts! HKEY_CURRENT_USER\SOFTWARE\Classes\!exts! HKEY_CLASSES_ROOT\!exts!
+				reg add "HKEY_CLASSES_ROOT\!exts!" /ve /t REG_SZ /d "lnkfile" /f
 			)
 			echo reg import !reg_file1! >> "%current_dir%Recover_icons.bat"
-		    echo move /y !reg_file1! %temp% >> "%current_dir%Recover_icons.bat"
-        )
-    )
+			echo move /y !reg_file1! %temp% >> "%current_dir%Recover_icons.bat"
+			if !progid_open!==1 (
+				echo reg delete HKEY_CLASSES_ROOT\!exts! /ve /f >> "%current_dir%Recover_icons.bat"
+			)
+		)
+	)
 )
 echo echo 还原完成，请等待... >> "%current_dir%Recover_icons.bat"
-echo pause>> "%current_dir%Recover_icons.bat"
-echo taskkill /f /im "explorer.exe">> "%current_dir%Recover_icons.bat"
 echo reg import "!wallpaper_reg_file!" >> "%current_dir%Recover_icons.bat"
 echo move /y %current_dir%current_wallpaper.reg %temp% >> "%current_dir%Recover_icons.bat"
 echo start explorer>> "%current_dir%Recover_icons.bat"
+echo pause
 echo set j=50>> "%current_dir%Recover_icons.bat"
 echo :back>> "%current_dir%Recover_icons.bat"
 echo RunDll32.exe USER32.DLL,UpdatePerUserSystemParameters>> "%current_dir%Recover_icons.bat"
@@ -138,97 +174,128 @@ echo move /y %current_dir%Recover_icons.bat %temp% >> "%current_dir%Recover_icon
 
 cls
 echo 还原脚本已生成到 %current_dir%Recover_icons.bat
+echo.
 echo 接下来将会重载您的资源管理器以显示更改，请确保您的工作均已保存（这意味着您正浏览的文件夹会被强制关闭，您的文件操作会被中断）
+echo.
 echo 杀毒软件如果提示恶意请放行，不放心可以右键本bat查看源码或自己去任务管理器重启文件资源管理器（explorer.exe）
+echo.
 echo 请等待...
+echo.
 pause
 taskkill /f /im "explorer.exe"
 if !errorlevel!==0 (goto :success) else (goto :fail)
 :success
-    reg add "HKEY_CURRENT_USER\Control Panel\Desktop" /v Wallpaper /d "%wallpaper_path%" /f
-    reg add "HKEY_CURRENT_USER\Control Panel\Desktop" /v WallpaperStyle /d "2" /f
-    attrib -h -s -r "%userprofile%\AppData\Local\IconCache.db"
-    del /f "%userprofile%\AppData\Local\IconCache.db"
-    attrib /s /d -h -s -r "%userprofile%\AppData\Local\Microsoft\Windows\Explorer\*"
-    del /f "%userprofile%\AppData\Local\Microsoft\Windows\Explorer\thumbcache_32.db"
-    del /f "%userprofile%\AppData\Local\Microsoft\Windows\Explorer\thumbcache_96.db"
-    del /f "%userprofile%\AppData\Local\Microsoft\Windows\Explorer\thumbcache_102.db"
-    del /f "%userprofile%\AppData\Local\Microsoft\Windows\Explorer\thumbcache_256.db"
-    del /f "%userprofile%\AppData\Local\Microsoft\Windows\Explorer\thumbcache_1024.db"
-    del /f "%userprofile%\AppData\Local\Microsoft\Windows\Explorer\thumbcache_idx.db"
-    del /f "%userprofile%\AppData\Local\Microsoft\Windows\Explorer\thumbcache_sr.db"
-    start explorer
-    set j=10
-    :back
-    RunDll32.exe USER32.DLL,UpdatePerUserSystemParameters
-    set /a j-=1
-    if !j! neq 0 (goto back)
-    echo 成功！
-    pause
-    exit
+	reg add "HKEY_CURRENT_USER\Control Panel\Desktop" /v Wallpaper /d "%wallpaper_path%" /f
+	reg add "HKEY_CURRENT_USER\Control Panel\Desktop" /v WallpaperStyle /d "2" /f
+	attrib -h -s -r "%userprofile%\AppData\Local\IconCache.db"
+	del /f "%userprofile%\AppData\Local\IconCache.db"
+	attrib /s /d -h -s -r "%userprofile%\AppData\Local\Microsoft\Windows\Explorer\*"
+	del /f "%userprofile%\AppData\Local\Microsoft\Windows\Explorer\thumbcache_32.db"
+	del /f "%userprofile%\AppData\Local\Microsoft\Windows\Explorer\thumbcache_96.db"
+	del /f "%userprofile%\AppData\Local\Microsoft\Windows\Explorer\thumbcache_102.db"
+	del /f "%userprofile%\AppData\Local\Microsoft\Windows\Explorer\thumbcache_256.db"
+	del /f "%userprofile%\AppData\Local\Microsoft\Windows\Explorer\thumbcache_1024.db"
+	del /f "%userprofile%\AppData\Local\Microsoft\Windows\Explorer\thumbcache_idx.db"
+	del /f "%userprofile%\AppData\Local\Microsoft\Windows\Explorer\thumbcache_sr.db"
+	start explorer
+	set j=25
+	:back
+	RunDll32.exe USER32.DLL,UpdatePerUserSystemParameters
+	set /a j-=1
+	if !j! neq 0 (goto back)
+	echo 成功！
+	pause
+	exit
 :fail
-    echo 失败了...接下来的路请独自前行...
-    start taskmgr
-    pause
-    exit
+	echo 失败了...接下来的路请独自前行...
+	start taskmgr
+	pause
+	exit
 :address_special
-    set progid=!exts:~1!file
-    del !reg_file1! /f /s /q
+	set progid=!exts:~1!file
+	del !reg_file1! /f /s /q
 	del !reg_file2! /f /s /q
 	set reg_file1="%current_dir%!progid!_Recovery1_!str!.reg"
 	set reg_file2="%current_dir%!progid!_Recovery2_!str!.reg"
 	set reg_file3="%current_dir%!progid!_Recovery3_!str!.reg"
+	set reg_file4="%current_dir%!progid!_Recovery4_!str!.reg"
+	reg add "HKEY_CLASSES_ROOT\!exts!" /ve /t REG_SZ /d " " /f
 	reg export "HKEY_CLASSES_ROOT\!progid!" "!reg_file1!" /y
 	reg export "HKEY_CLASSES_ROOT\!exts!" "!reg_file2!" /y
 	reg export "HKEY_CURRENT_USER\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\FileExts\!exts!" "!reg_file3!" /y
 	if !errorlevel!==1 (
-	    set unwelldefined=1
+		set unwelldefined=1
 	) else (
-	    if "!reg_file2!" neq "" (
-	        echo reg import !reg_file2! >> "%current_dir%Recover_icons.bat"
-	        echo move /y !reg_file2! %temp% >> "%current_dir%Recover_icons.bat"
-	        echo echo 正在还原注册表（杀软提示请放行）... >> "%current_dir%Recover_icons.bat"
-	        reg add "HKEY_CLASSES_ROOT\!exts!" /ve /t REG_SZ /d "lnkfile" /f
-echo !ProgId!
-pause
-                    ) else (
-del /f /s /q !reg_file2!
-)
+		echo reg import !reg_file2! >> "%current_dir%Recover_icons.bat"
+		echo move /y !reg_file2! %temp% >> "%current_dir%Recover_icons.bat"
+		echo echo 正在还原注册表（杀软提示请放行）... >> "%current_dir%Recover_icons.bat"
+		::此处会导致输出冗余，但又不影响，管他呢
+		call :fk_security HKEY_LOCAL_MACHINE\SOFTWARE\Classes\!exts! HKEY_CURRENT_USER\SOFTWARE\Classes\!exts! HKEY_CLASSES_ROOT\!exts!
+		reg add "HKEY_CLASSES_ROOT\!exts!" /ve /t REG_SZ /d "lnkfile" /f
+		::echo 已自动适配非正规关联：!ProgId!
+		::pause
 	)
 	exit /b
 :modify_defaulticon
-    reg add "HKEY_CLASSES_ROOT\%1\DefaultIcon" /ve /t REG_EXPAND_SZ /d "%icon_path%" /f
-    exit /b
+	call :fk_security HKEY_LOCAL_MACHINE\SOFTWARE\Classes\%1\DefaultIcon HKEY_CURRENT_USER\Software\Classes\%1\DefaultIcon HKEY_CLASSES_ROOT\%1\DefaultIcon
+	reg add "HKEY_CLASSES_ROOT\%1\DefaultIcon" /ve /t REG_EXPAND_SZ /d "%icon_path%" /f
+	exit /b
 :delete_others
-    reg delete "HKEY_CLASSES_ROOT\%2\ShellEx" /f
+	call :fk_security HKEY_LOCAL_MACHINE\SOFTWARE\Classes\%2\ShellEx HKEY_CURRENT_USER\SOFTWARE\Classes\%2\ShellEx HKEY_CLASSES_ROOT\%2\ShellEx
+	call :fk_security HKEY_LOCAL_MACHINE\SOFTWARE\Classes\%2\OpenWithList HKEY_CURRENT_USER\SOFTWARE\Classes\%2\OpenWithList HKEY_CLASSES_ROOT\%2\OpenWithList
+	call :fk_security HKEY_LOCAL_MACHINE\SOFTWARE\Classes\%2\OpenWithProgids HKEY_CURRENT_USER\SOFTWARE\Classes\%2\OpenWithProgids HKEY_CLASSES_ROOT\%2\OpenWithProgids
+	reg delete "HKEY_CLASSES_ROOT\%2\ShellEx" /f
 	reg delete "HKEY_CLASSES_ROOT\%2\OpenWithList" /f
+	::ProgID的打开方式不想处理了，杀！
 	reg delete "HKEY_CLASSES_ROOT\%2\OpenWithProgids" /f
-    exit /b
+	exit /b
 :modify_progid
-    set actual2=
-    set actual=
-    %temp%\setacl.exe -on HKEY_CURRENT_USER\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\FileExts\%1\UserChoice -ot reg -actn setprot -op "dacl:p_nc"
-    %temp%\setacl.exe -on HKEY_CURRENT_USER\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\FileExts\%1\UserChoice -ot reg -actn clear -clr dacl,sacl
-    %temp%\setacl.exe -on HKEY_CURRENT_USER\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\FileExts\%1\UserChoice -ot reg -actn ace -ace "n:everyone;p:full;m:set;w:dacl;i:np"
-    reg query "HKEY_CURRENT_USER\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\FileExts\%1\UserChoice" /v ProgId
+	set actual2=
+	set actual=
+	call :fk_security HKEY_CURRENT_USER\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\FileExts\%1 0 0
+	reg query "HKEY_CURRENT_USER\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\FileExts\%1\UserChoice" /v ProgId
 	if !errorlevel!==0 (
-	for /f "tokens=3 skip=1" %%m in ('reg query "HKEY_CURRENT_USER\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\FileExts\%1\UserChoice" /v ProgId 2^>nul') do (set actual=%%m)
-	if "!actual!" neq "" (
-	for /f "tokens=3 skip=1" %%g in ('reg query "HKEY_CLASSES_ROOT\!actual!\DefaultIcon" /ve 2^>nul') do (set actual2=%%g)
-	if "!actual!" neq "%icon_path%" (
-	    echo reg import !reg_file4! >> "%current_dir%Recover_icons.bat"
-	    echo move /y !reg_file4! %temp% >> "%current_dir%Recover_icons.bat"
-	    echo echo 正在还原注册表（杀软提示请放行）... >> "%current_dir%Recover_icons.bat"
-	    reg export "HKEY_CLASSES_ROOT\!actual!" "!reg_file4!" /y
-	    call :modify_defaulticon !actual!
-	    goto ret
+		for /f "tokens=3 skip=1" %%m in ('reg query "HKEY_CURRENT_USER\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\FileExts\%1\UserChoice" /v ProgId 2^>nul') do (set actual=%%m)
+		if "!actual!" neq "" (
+			reg query "HKEY_CLASSES_ROOT\!actual!\DefaultIcon" /ve
+			if !errorlevel!==1 (
+				reg add "HKEY_CLASSES_ROOT\!actual!\DefaultIcon" /ve /t REG_SZ /d "" /f
+			)
+			for /f "tokens=3 skip=1" %%g in ('reg query "HKEY_CLASSES_ROOT\!actual!\DefaultIcon" /ve 2^>nul') do (set actual2=%%g)	
+			if "!actual2!" neq "%icon_path%" (
+				echo reg import !reg_file4! >> "%current_dir%Recover_icons.bat"
+				echo move /y !reg_file4! %temp% >> "%current_dir%Recover_icons.bat"
+				echo echo 正在还原注册表（杀软提示请放行）... >> "%current_dir%Recover_icons.bat"
+				reg export "HKEY_CLASSES_ROOT\!actual!" "!reg_file4!" /y
+				call :modify_defaulticon !actual!
+				goto ret
+			)
+		) else (
+			::特殊情况处理（C0c1U0->P）
+			reg export "HKEY_CURRENT_USER\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\%1\OpenWithProgids" "!reg_file4!" /y
+			echo reg delete "HKEY_CURRENT_USER\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\%1\OpenWithProgids" /f >> "%current_dir%Recover_icons.bat"
+			echo reg import !reg_file4! >> "%current_dir%Recover_icons.bat"
+			echo move /y !reg_file4! %temp% >> "%current_dir%Recover_icons.bat"
+		)
+	) else (
+	goto :ret
 	)
+	reg add "HKEY_CURRENT_USER\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\FileExts\%1\UserChoice" /v "Progid" /t REG_SZ /d "%2" /f
+	:ret
+	exit /b
+:fk_security
+	::HKCR=HKLM+HKCU+SxS
+	%temp%\setacl.exe -on %1 -ot reg -actn setowner -ownr "n:everyone" -rec yes
+	%temp%\setacl.exe -on %1 -ot reg -actn clear -clr dacl,sacl -rec yes -actn ace -ace "n:everyone;p:full;m:set;w:dacl;i:so,sc" -rec yes
+	if %2 NEQ 0 (
+		%temp%\setacl.exe -on %2 -ot reg -actn setowner -ownr "n:everyone" -rec yes
+		%temp%\setacl.exe -on %2 -ot reg -actn clear -clr dacl,sacl -rec yes -actn ace -ace "n:everyone;p:full;m:set;w:dacl;i:so,sc" -rec yes
 	)
+	if %3 NEQ 0 (
+		%temp%\setacl.exe -on %3 -ot reg -actn setowner -ownr "n:everyone" -rec yes
+		%temp%\setacl.exe -on %3 -ot reg -actn clear -clr dacl,sacl -rec yes -actn ace -ace "n:everyone;p:full;m:set;w:dacl;i:so,sc" -rec yes
 	)
-
-    reg add "HKEY_CURRENT_USER\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\FileExts\%1\UserChoice" /v "Progid" /t REG_SZ /d "%2" /f
-    :ret
-    exit /b
+exit /b
 :export
 echo.-----BEGIN CERTIFICATE----->>fc
 echo.TVqQAAMAAAAEAAAA//8AALgAAAAAAAAAQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA>>fc
